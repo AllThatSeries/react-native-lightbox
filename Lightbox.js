@@ -1,51 +1,20 @@
-/**
- * @providesModule Lightbox
- */
-'use strict';
-
-var React = require('react');
-var {
+import React, {
   Children,
   cloneElement,
-  PropTypes,
-} = React;
-var {
+} from 'react';
+import {
   Animated,
   TouchableHighlight,
   View,
-} = require('react-native');
-var TimerMixin = require('react-timer-mixin');
+} from 'react-native';
+import PropTypes from 'prop-types';
+import LightboxOverlay from './LightboxOverlay';
 
-var LightboxOverlay = require('./LightboxOverlay');
+class Lightbox extends React.Component {
+  constructor(props) {
+    super(props);
 
-var Lightbox = React.createClass({
-  mixins: [TimerMixin],
-
-  propTypes: {
-    activeProps:     PropTypes.object,
-    renderHeader:    PropTypes.func,
-    renderContent:   PropTypes.func,
-    underlayColor:   PropTypes.string,
-    backgroundColor: PropTypes.string,
-    onOpen:          PropTypes.func,
-    onClose:         PropTypes.func,
-    springConfig:    PropTypes.shape({
-      tension:       PropTypes.number,
-      friction:      PropTypes.number,
-    }),
-    swipeToDismiss:  PropTypes.bool,
-  },
-
-  getDefaultProps: function() {
-    return {
-      swipeToDismiss: true,
-      onOpen: () => {},
-      onClose: () => {},
-    };
-  },
-
-  getInitialState: function() {
-    return {
+    this.state = {
       isOpen: false,
       origin: {
         x: 0,
@@ -54,22 +23,22 @@ var Lightbox = React.createClass({
         height: 0,
       },
       layoutOpacity: new Animated.Value(1),
-    };
-  },
+    }
+  }
 
-  getContent: function() {
-    if(this.props.renderContent) {
+  getContent() {
+    if (this.props.renderContent) {
       return this.props.renderContent();
-    } else if(this.props.activeProps) {
+    } else if (this.props.activeProps) {
       return cloneElement(
         Children.only(this.props.children),
         this.props.activeProps
       );
     }
     return this.props.children;
-  },
+  }
 
-  getOverlayProps: function() {
+  getOverlayProps() {
     return {
       isOpen: this.state.isOpen,
       origin: this.state.origin,
@@ -78,16 +47,16 @@ var Lightbox = React.createClass({
       springConfig: this.props.springConfig,
       backgroundColor: this.props.backgroundColor,
       children: this.getContent(),
-      onClose: this.onClose,
+      onClose: this.onClose.bind(this),
     };
-  },
+  }
 
-  open: function() {
+  open() {
     this._root.measure((ox, oy, width, height, px, py) => {
       this.props.onOpen();
 
       this.setState({
-        isOpen: (this.props.navigator ? true : false),
+        isOpen: false,
         isAnimating: true,
         origin: {
           width,
@@ -96,62 +65,69 @@ var Lightbox = React.createClass({
           y: py,
         },
       }, () => {
-        if(this.props.navigator) {
-          var route = {
-            component: LightboxOverlay,
-            passProps: this.getOverlayProps(),
-          };
-          var routes = this.props.navigator.getCurrentRoutes();
-          routes.push(route);
-          this.props.navigator.immediatelyResetRouteStack(routes);
-        } else {
-          this.setState({
-            isOpen: true,
-          });
-        }
-        this.setTimeout(() => {
-          this.state.layoutOpacity.setValue(0);
+        this.setState({
+          isOpen: true,
         });
+        setTimeout(() => {
+          this.state.layoutOpacity.setValue(0);
+        }, 0);
       });
     });
-  },
+  }
 
-  close: function() {
+  close() {
     throw new Error('Lightbox.close method is deprecated. Use renderHeader(close) prop instead.')
-  },
+  }
 
-  onClose: function() {
+  onClose() {
     this.state.layoutOpacity.setValue(1);
     this.setState({
       isOpen: false,
     }, this.props.onClose);
-    if(this.props.navigator) {
-      var routes = this.props.navigator.getCurrentRoutes();
-      routes.pop();
-      this.props.navigator.immediatelyResetRouteStack(routes);
-    }
-  },
+  }
 
-  render: function() {
+  render() {
     // measure will not return anything useful if we dont attach a onLayout handler on android
     return (
       <View
-        ref={component => this._root = component}
+        ref={c => this._root = c}
         style={this.props.style}
-        onLayout={() => {}}
+        onLayout={() => { }}
       >
-        <Animated.View style={{opacity: this.state.layoutOpacity}}>
+        <Animated.View style={{ opacity: this.state.layoutOpacity }}>
           <TouchableHighlight
             underlayColor={this.props.underlayColor}
-            onPress={this.open}
+            onPress={() => this.open()}
           >
             {this.props.children}
           </TouchableHighlight>
         </Animated.View>
-        {this.props.navigator ? false : <LightboxOverlay {...this.getOverlayProps()} />}
+        <LightboxOverlay {...this.getOverlayProps() } />
       </View>
     );
   }
-});
+}
 
-module.exports = Lightbox;
+Lightbox.propTypes = {
+  activeProps: PropTypes.object,
+  renderHeader: PropTypes.func,
+  renderContent: PropTypes.func,
+  underlayColor: PropTypes.string,
+  backgroundColor: PropTypes.string,
+  onOpen: PropTypes.func,
+  onClose: PropTypes.func,
+  springConfig: PropTypes.shape({
+    tension: PropTypes.number,
+    friction: PropTypes.number,
+  }),
+  swipeToDismiss: PropTypes.bool,
+};
+
+Lightbox.defaultProps = {
+  swipeToDismiss: true,
+  onOpen: () => { },
+  onClose: () => { },
+}
+
+export default Lightbox;
+
